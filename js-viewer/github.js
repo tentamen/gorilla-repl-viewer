@@ -7,6 +7,16 @@
 var getFromGithub = function (user, repo, path, callback) {
     $.get("https://api.github.com/repos/" + user + "/" + repo + "/contents/" + path).success(function (data) {
         callback(decodeGitHubBase64(data.content));
+    }).fail(function (jqXHR) {
+        if (jqXHR.responseJSON.errors[0].code == 'too_large') {
+            var parentPath = path.replace(/[^\/]*$/, '');
+            $.get("https://api.github.com/repos/" + user + "/" + repo + "/contents/" + parentPath).success(function (data) {
+                var f = _.find(data, function (d) { return d.path == path })
+                $.get("https://api.github.com/repos/" + user + "/" + repo + "/git/blobs/" + f.sha).success(function (data) {
+                    callback(decodeGitHubBase64(data.content));
+                });
+            });
+        };
     });
 };
 
